@@ -1,0 +1,88 @@
+#!/usr/bin/env perl
+use strict;
+use warnings;
+
+our $VERSION = '0.01';
+
+use Data::Dumper;$Data::Dumper::Useqq = 1;
+use FindBin;
+use lib
+	"$FindBin::Bin/../lib",
+	glob("$FindBin::Bin/../libs/*/lib"),
+	glob("$FindBin::Bin/../libs/*/blib/lib"),
+	glob("$FindBin::Bin/../libs/*/blib/arch"),
+;
+use Daemond::Lite;
+use EV;
+use AnyEvent;
+use AnyEvent::Socket;
+use AnyEvent::Handle;
+
+name     'maxconnect';
+config   './dumblistener.conf';
+children 1;
+pid      '%n.%u.pid';
+
+
+sub check {
+	my $self = shift;
+	my $this = $self->{this};
+
+	$this->{cfg} = $self->{cfg};
+}
+
+sub start {
+	my $self = shift;
+	my $this = $self->{this};
+	$self->log->debug("Daemon starting");
+}
+
+sub abort {
+	my $self = shift;
+	$self->log->error('ABORT');
+}
+
+sub run {
+	my $self = shift;
+	my $this = $self->{this};
+
+	my $conn_id=1;
+	my %connection;
+
+  my $next; $next = sub {	
+		#$self->log->info("Start 10 connections");
+		#my $cv = AE::cv sub{ $next->() };
+		#$cv->begin;
+		#for (1..10) {
+		#	$cv->begin;
+			tcp_connect( "127.0.0.1", 44777,
+				sub {
+					my $id = $conn_id++;
+					my $fh = shift or return $next->();
+					
+					$connection{$id} = $fh;
+					my $total = scalar keys %connection;
+					$self->log->info("[$total] connections in one child");
+					$next->();
+				}
+			);
+		#}
+		#$cv->end;
+		#$cv->recv;
+	}; 
+
+	$next->();
+
+	EV::loop();
+	warn "$$ gone $!";
+}
+
+sub stop {
+	my $self = shift;
+	$self->log->error("Child $$ exiting");
+	EV::unloop();
+	return;
+}
+
+runit();
+1;
