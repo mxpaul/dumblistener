@@ -26,20 +26,15 @@ pid      '%n.%u.pid';
 
 sub check {
 	my $self = shift;
-	my $this = $self->{this};
-
-	$this->{cfg} = $self->{cfg};
 }
 
 sub start {
 	my $self = shift;
-	my $this = $self->{this};
 	$self->log->debug("Daemon starting");
 }
 
 sub run {
 	my $self = shift;
-	my $this = $self->{this};
 
 	my $conn_id=1;
 	my %connection;
